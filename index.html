@@ -451,15 +451,15 @@ async function playClip() {
   try { audio.currentTime = 0; } catch {}
   try { await audio.play(); } catch { toast("Couldn't start audio. Tap play again."); return; }
   playing = true; updatePlay();
-  const tick = () => {
-    const t = audio.currentTime;
-    drawWave(t);
-    if (t >= lim || audio.ended || audio.paused) { stopAudio(); return; }
-    rafId = requestAnimationFrame(tick);
-  };
-  rafId = requestAnimationFrame(tick);
+  // timer-based cut-off (keeps working when the tab is hidden, unlike requestAnimationFrame)
+  guardId = setInterval(() => {
+    if (audio.currentTime >= lim || audio.ended || audio.paused) stopAudio();
+  }, 10);
+  const draw = () => { if (!playing) return; drawWave(audio.currentTime); rafId = requestAnimationFrame(draw); };
+  rafId = requestAnimationFrame(draw);
 }
-function stopAudio() { audio.pause(); playing = false; cancelAnimationFrame(rafId); updatePlay(); drawWave(null); }
+let guardId = 0;
+function stopAudio() { audio.pause(); playing = false; clearInterval(guardId); cancelAnimationFrame(rafId); updatePlay(); drawWave(null); }
 
 /* ---------- waveform ---------- */
 const canvas = $("wave"), ctx = canvas.getContext("2d");
